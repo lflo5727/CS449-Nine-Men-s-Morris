@@ -23,7 +23,7 @@ class Node:
         # class instance is printed
         return self.name
 
-    def neighbors(self) -> List[Node]:
+    def neighbors(self) -> List["Node"]:
         """Neighbors of the current node.
 
         Args:
@@ -38,7 +38,7 @@ class Node:
         return True if self.piece else False
 
     def is_empty(self) -> bool:
-        return not self.isOccupied()
+        return not self.is_occupied()
 
 
 class Piece:
@@ -49,7 +49,7 @@ class Piece:
         node: The node that this piece sit on
     """
 
-    def __init__(self, player: Player):
+    def __init__(self, player: "Player"):
         self.player: Player = player
         self.node: Node = None
 
@@ -63,9 +63,9 @@ class Player:
         pieces: List of pieces in the players hand
     """
 
-    def __init__(self, name, board: Board):
+    def __init__(self, name, board: "Board"):
         self.name: str = name
-        self.board: Board = board
+        self.board: "Board" = board
         self.pieces: List[Piece] = [Piece(self) for x in range(0,9)]
         
     def place_piece(self, location: str) -> bool:
@@ -131,7 +131,7 @@ class Board:
             if name not in self.board:
                 create_node(name, neighbors) 
 
-    def place_piece(self, piece, location):
+    def place_piece(self, piece: Piece, location: str) -> bool:
         """Place a piece on the board
 
         Args:
