@@ -53,6 +53,10 @@ class Piece:
         self.player: Player = player
         self.node: Node = None
 
+    def __repr__(self) -> str:
+        # Useful in debugging. This will just print the Player and Node
+        # location when the class instance is printed
+        return "%s @ %s" % (self.player.name, self.node.name)
 
 class Player:
     """Actions a player can take
@@ -68,6 +72,11 @@ class Player:
         self.board: "Board" = board
         self.pieces: List[Piece] = [Piece(self) for x in range(0,9)]
         
+    def __repr__(self) -> str:
+        # Useful in debugging. This will just print the Player name
+        # when the class instance is printed
+        return self.name
+    
     def place_piece(self, location: str) -> bool:
         """Place a piece from the players hand on the board
 

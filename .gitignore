@@ -1,4 +1,6 @@
 .history
+__pycache__
+*.pyc
 .idea/CS449-Nine-Men-s-Morris.iml
 .idea/inspectionProfiles/profiles_settings.xml
 .idea/misc.xml
