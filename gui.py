@@ -51,8 +51,8 @@ class Gui:
         self.player2_grid = {}
 
         pygame.init()
-        self.font12 = pygame.font.Font('GameCube.ttf', 12)
-        self.font48 = pygame.font.Font('GameCube.ttf', 48)
+        self.font12 = pygame.font.Font('assets/GameCube.ttf', 12)
+        self.font48 = pygame.font.Font('assets/GameCube.ttf', 48)
         self.screen = pygame.display.set_mode(WIN_SIZE)
         self.board_surface = pygame.Surface(WIN_SIZE)
         
@@ -151,12 +151,12 @@ class Gui:
         )
 
     def game_message(self, *args):
-        font = pygame.font.Font('Monoid-Bold.ttf', 18)
+        font = pygame.font.Font('assets/Monoid-Bold.ttf', 18)
         text = font.render(', '.join([m for m in args if m]), True, pygame.Color('#4996E3'))
         self.screen.blit(text, text.get_rect(center=(WIN_SIZE[0]//2, text.get_height()//2 + Y_OFFSET - text.get_height() * 2)))
 
     def debug_message(self, *args):
-        font = pygame.font.Font('Monoid-Regular.ttf', 12)
+        font = pygame.font.Font('assets/Monoid-Regular.ttf', 12)
         text = font.render(', '.join([m for m in args if m]), True, pygame.Color('#aaaaaa'))
         self.screen.blit(text, text.get_rect(center=(WIN_SIZE[0]//2, WIN_SIZE[1] - text.get_height()//2)))
             

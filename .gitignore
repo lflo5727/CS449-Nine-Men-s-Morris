@@ -1,9 +1,5 @@
 .history
+.vscode
+.idea
 __pycache__
 *.pyc
-.idea/CS449-Nine-Men-s-Morris.iml
-.idea/inspectionProfiles/profiles_settings.xml
-.idea/misc.xml
-.idea/vcs.xml
-.idea/modules.xml
-.idea/workspace.xml
