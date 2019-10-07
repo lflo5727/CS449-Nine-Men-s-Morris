@@ -4,7 +4,8 @@ import pygame
 from board import Node, Piece, Board, Player
 from gui import Gui
 
-def boardDisplay():
+def board_render():
     board = Board()
+    assert(board)
 
 

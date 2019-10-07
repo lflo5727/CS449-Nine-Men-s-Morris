@@ -4,5 +4,5 @@ import pygame
 from board import Node, Piece, Board, Player
 from gui import Gui
 
-def piecesDisplay():
+def pieces_display():
     pass
