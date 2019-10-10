@@ -1,4 +1,7 @@
 from typing import List, Dict
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class Node:
@@ -17,11 +20,12 @@ class Node:
         self.south: Node = None
         self.west: Node = None
         self.piece: Piece = None
+        log.info("Node created: %s", str(self))
 
     def __repr__(self) -> str:
-        # Useful in debugging. This will just print the nodes name when the 
-        # class instance is printed
-        return self.name
+        # Useful in debugging. Prints the node name and piece
+        #  when the class instance is printed
+        return '%s %s' % (self.name, 'X' if self.is_occupied() else '') 
 
     def neighbors(self) -> List["Node"]:
         """Neighbors of the current node.
@@ -35,7 +39,7 @@ class Node:
         return [node for node in [self.north, self.east, self.south, self.west] if node]
 
     def is_occupied(self) -> bool:
-        return True if self.piece else False
+        return bool(self.piece)
 
     def is_empty(self) -> bool:
         return not self.is_occupied()
@@ -45,18 +49,24 @@ class Piece:
     """A players piece
 
     Attributes:
+        id: ID of the piece 
         player: Player who owns this piece
         node: The node that this piece sit on
     """
 
-    def __init__(self, player: "Player"):
+    def __init__(self, id: int, player: "Player"):
+        self.id = id
         self.player: Player = player
         self.node: Node = None
+        log.info("Piece created: %s", str(self))
 
     def __repr__(self) -> str:
         # Useful in debugging. This will just print the Player and Node
         # location when the class instance is printed
-        return "%s @ %s" % (self.player.name, self.node.name if self.node else "None")
+        return "%s - %d @ %s" % (self.player.name, self.id, self.node.name if self.node else "None")
+
+    def is_placed(self):
+        return bool(self.node)
         
 class Player:
     """Actions a player can take
@@ -64,20 +74,21 @@ class Player:
     Attributes:
         name: Name of the player
         board: Current board the player is playing on
-        pieces: List of pieces in the players hand
+        pieces: Dict of pieces in the players hand
     """
 
     def __init__(self, name, board: "Board"):
         self.name: str = name
         self.board: "Board" = board
-        self.pieces: List[Piece] = [Piece(self) for x in range(9)]
+        self.pieces: Dict[int, Piece] = {x: Piece(x, self) for x in range(9)}
+        log.info("Player created: %s", str(self))
 
     def __repr__(self) -> str:
         # Useful in debugging. This will just print the Player name
         # when the class instance is printed
         return self.name
         
-    def place_piece(self, piece: Piece, location: str) -> bool:
+    def place_piece(self, piece_id: int, location: str) -> bool:
         """Place a piece from the players hand on the board
 
         Args:
@@ -88,14 +99,29 @@ class Player:
         """
 
         if self.pieces:
-            piece_i = self.pieces.index(piece)
-            piece = self.pieces.pop(piece_i)
-            result = self.board.place_piece(piece, location)
-            if result:
+            if piece_id not in self.pieces:
+                log.error("Piece cannot be placed. It is not in the players hand.")
+                return False
+            if self.board.place_piece(self.pieces[piece_id], location):
+                del self.pieces[piece_id]
                 return True
-            else:
-                self.pieces.append(piece)
+        log.error("Piece cannot be placed. There are no pieces in the players hand.")
         return False
+
+    def remove_piece(self):
+        pass
+
+    def move_piece(self):
+        pass
+
+    def get_phase(self):
+        pass
+
+    def can_fly(self):
+        pass
+
+    def can_move(self):
+        pass
 
     
 class Board:
@@ -143,7 +169,8 @@ class Board:
 
         for name, neighbors in node_map.items():
             if name not in self.board:
-                create_node(name, neighbors) 
+                create_node(name, neighbors)
+        log.info("Created board nodes")
 
     def place_piece(self, piece: Piece, location: str) -> bool:
         """Place a piece on the board
@@ -153,16 +180,30 @@ class Board:
         Returns:
             True if able to successfully place the piece on the board otherwise False
         """
-
+        if location not in self.board:
+            log.error("Piece cannot be placed. Invalid location: %s.", location)
+            return False
         node = self.board[location]
         if node.is_empty():
             piece.node = node
             node.piece = piece
+            log.info("Piece placed @ %s", location)
             return True
+        log.info("Piece cannot be placed. Occupied by: %s.", str(node.piece))
         return False
+        
+    def remove_piece(self):
+        pass
+
+    def move_piece(self):
+        pass
+
+    def valid_moves(self):
+        pass
 
 def main():
     pass
 
 if __name__ == '__main__':
+    log.info("Board imported")
     main()
