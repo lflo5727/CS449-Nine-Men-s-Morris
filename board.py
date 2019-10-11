@@ -146,10 +146,10 @@ class Player:
             return 3
 
     def can_fly(self):
-        pass
+        return self.get_phase() == 3
 
     def can_move(self):
-        pass
+        return len(self.valid_moves()) == 0
 
     
 class Board:
