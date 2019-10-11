@@ -108,14 +108,42 @@ class Player:
         log.error("Piece cannot be placed. There are no pieces in the players hand.")
         return False
 
+    def valid_moves(self):
+        """  documentation placeholder """
+        moves = set()
+        phase = self.get_phase()
+        if phase == 1 or phase == 3:
+            for node in self.board.get_nodes():
+                if node.is_empty():
+                    moves.add(node.name)
+        elif phase == 2:
+            for node in self.board.get_nodes():
+                if node.player is self:
+                    for neighbor_node in node.neighbors():
+                        if neighbor_node.is_empty():
+                            moves.add(neighbor_node.name)
+        return moves
+
     def remove_piece(self):
         pass
 
     def move_piece(self):
         pass
 
+    def get_placed_pieces(self):
+        placed = []
+        for piece in self.board.get_pieces():
+            if piece.player is self:
+                placed.append(piece)
+        return placed
+
     def get_phase(self):
-        pass
+        if self.pieces:
+            return 1
+        elif not self.pieces and len(self.get_placed_pieces()) > 3:
+            return 2
+        elif not self.pieces and len(self.get_placed_pieces()) <= 3:
+            return 3
 
     def can_fly(self):
         pass
@@ -198,8 +226,15 @@ class Board:
     def move_piece(self):
         pass
 
-    def valid_moves(self):
-        pass
+    def get_pieces(self):
+        pieces = []
+        for node in self.board.values():
+            if node.is_occupied():
+                pieces.append(node.piece)
+        return pieces
+
+    def get_nodes(self):
+        return list(self.board.values())
 
 def main():
     pass
