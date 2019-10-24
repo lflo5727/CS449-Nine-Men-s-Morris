@@ -143,6 +143,7 @@ class Gui:
             'placemat_degree': 270,
             'placemat_x_calc': lambda self, w: WIN_SIZE[0] - w // 2
             }]
+            
         def __init__(self, player):
             if not Gui.Player._player_opt:
                 msg = 'Can not create more than 2 players!'
