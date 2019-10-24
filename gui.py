@@ -72,7 +72,6 @@ class Gui:
 
         def move(self, *args, **kwargs):
             log.error("Can not move a Node!")
-            pass
 
 
     class Piece(Circle):
@@ -132,27 +131,19 @@ class Gui:
 
 
     class Player:
-        _player_opt = [{
-            'id': 1,
-            'color': pygame.Color('#E34996'),
-            'placemat_degree': 90,
-            'placemat_x_calc': lambda self, w: w // 2,
-            }, {
-            'id': 2,
-            'color':  pygame.Color('#96E349'),
-            'placemat_degree': 270,
-            'placemat_x_calc': lambda self, w: WIN_SIZE[0] - w // 2
-            }]
-            
-        def __init__(self, player):
-            if not Gui.Player._player_opt:
-                msg = 'Can not create more than 2 players!'
-                log.error(msg)
-                raise Exception(msg)
+        def __init__(self, id, player):
+            self.id = id
+            if self.id == 1:
+                self.color: pygame.Color('#E34996')
+                self.placemat_degree: 90
+                self.placemat_x_calc: lambda self, w: w // 2
+            elif self.id == 2:
+                self.color:  pygame.Color('#96E349')
+                self.placemat_degree: 270
+                self.placemat_x_calc: lambda self, w: WIN_SIZE[0] - w // 2
+
             self.player = player
             self.pieces = {}
-            for k, v in Gui.Player._player_opt.pop(0).items():
-                setattr(self, k, v)
             self.create()
 
         def create(self):
@@ -177,7 +168,7 @@ class Gui:
 
     def __init__(self, board, player1, player2):
         self.board = Gui.Board(board.board)
-        self.players = {1: Gui.Player(player1), 2: Gui.Player(player2)}
+        self.players = {1: Gui.Player(1, player1), 2: Gui.Player(2, player2)}
         self.screen = pygame.display.set_mode(WIN_SIZE)
 
     def get_piece(self, vector):

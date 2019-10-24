@@ -127,13 +127,13 @@ class Player:
     def remove_piece(self, piece):
         # remove this players piece
         if piece.player is self:
-            self.board.remove_piece(piece)
+            return self.board.remove_piece(piece)
+        return False
         
 
-    def move_piece(self, piece, location):
-
-        pass
-
+    def move_piece(self, piece: Piece, location: str):
+        return self.board.move_piece(piece, location)
+        
     def get_placed_pieces(self):
         placed = []
         for piece in self.board.get_pieces():
@@ -228,8 +228,8 @@ class Board:
         node = piece.node
         node.piece = None
 
-    def move_piece(self):
-        pass
+    def move_piece(self, piece: Piece, location: str):
+        return self.place_piece(piece, location)
 
     def get_pieces(self):
         pieces = []
