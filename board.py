@@ -124,10 +124,14 @@ class Player:
                             moves.add(neighbor_node.name)
         return moves
 
-    def remove_piece(self):
-        pass
+    def remove_piece(self, piece):
+        # remove this players piece
+        if piece.player is self:
+            self.board.remove_piece(piece)
+        
 
-    def move_piece(self):
+    def move_piece(self, piece, location):
+
         pass
 
     def get_placed_pieces(self):
@@ -146,10 +150,10 @@ class Player:
             return 3
 
     def can_fly(self):
-        pass
+        return self.get_phase() == 3
 
     def can_move(self):
-        pass
+        return len(self.valid_moves()) > 0 
 
     
 class Board:
@@ -220,8 +224,9 @@ class Board:
         log.info("Piece cannot be placed. Occupied by: %s.", str(node.piece))
         return False
         
-    def remove_piece(self):
-        pass
+    def remove_piece(self, piece: Piece):
+        node = piece.node
+        node.piece = None
 
     def move_piece(self):
         pass
