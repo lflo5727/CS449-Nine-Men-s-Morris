@@ -134,13 +134,13 @@ class Gui:
         def __init__(self, id, player):
             self.id = id
             if self.id == 1:
-                self.color: pygame.Color('#E34996')
-                self.placemat_degree: 90
-                self.placemat_x_calc: lambda self, w: w // 2
+                self.color =  pygame.Color('#E34996')
+                self.placemat_degree = 90
+                self.placemat_x_calc = lambda self, w: w // 2
             elif self.id == 2:
-                self.color:  pygame.Color('#96E349')
-                self.placemat_degree: 270
-                self.placemat_x_calc: lambda self, w: WIN_SIZE[0] - w // 2
+                self.color =  pygame.Color('#96E349')
+                self.placemat_degree = 270
+                self.placemat_x_calc = lambda self, w: WIN_SIZE[0] - w // 2
 
             self.player = player
             self.pieces = {}

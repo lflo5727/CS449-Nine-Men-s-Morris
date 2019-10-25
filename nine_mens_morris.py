@@ -17,7 +17,7 @@ def main():
     player1 = Player("Player 1", board)
     player2 = Player("Player 2", board)
     gui = Gui(board, player1, player2)
-        
+    
     selected_piece = None
     piece_prev_pos = None
 
@@ -33,7 +33,7 @@ def main():
             if e.type == pygame.QUIT:
                 return
             if e.type == pygame.MOUSEBUTTONDOWN:
-                if selected_piece is None and (player1.pieces or player2.pieces):
+                if selected_piece is None and (player1.get_phase() == 1 or player2.get_phase() == 1):
                     selected_piece = gui.get_piece(mouse_pos)
                     if selected_piece is not None:
                         if selected_piece.piece.player is not current_player or selected_piece.piece.is_placed():
@@ -41,11 +41,26 @@ def main():
                         else:
                             log.info("Piece %s picked up.", selected_piece)
                             piece_prev_pos = selected_piece.xy
+                elif selected_piece is None and (player1.get_phase() > 1 or player2.get_phase() > 1):
+                    selected_piece = gui.get_piece(mouse_pos)
+                    if selected_piece is not None:
+                        if selected_piece.piece.player is not current_player:
+                            selected_piece = None
+                        else:
+                            log.info("Piece %s picked up.", selected_piece)
+                            piece_prev_pos = selected_piece.xy
             if e.type == pygame.MOUSEBUTTONUP:
                 if selected_piece is not None:
                     node = gui.get_node(mouse_pos)
-                    if node is not None and current_player.place_piece(selected_piece.piece.id, node.node.name):
-                        selected_piece.move(*node.xy)
+                    if node is not None:
+                        moved = None
+                        if current_player.get_phase() == 1:
+                            moved = current_player.place_piece(selected_piece.piece.id, node.node.name)
+                        elif current_player.get_phase() > 1:
+                            moved = current_player.move_piece(selected_piece.piece, node.node.name)
+
+                        if moved:
+                            selected_piece.move(*node.xy)
 
                         if current_player is player1:
                             current_player = player2
@@ -62,7 +77,7 @@ def main():
         if GAME_STATE == "RUNNING":
             if not player1.pieces and not player2.pieces:
                 log.info("Game finished. No more pieces.")
-                GAME_STATE = "CLOSED"
+                #GAME_STATE = "CLOSED"
             else:
                 gui.game_message("%s turn" % (current_player))
         else:
