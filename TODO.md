@@ -9,9 +9,10 @@ Implement basic game logic
 - player move [scott - 30m | 1h]
 - remove player piece [scott - 15m | 5m]
 - find mills [ - 1h 30m | ]
-- new mill formed check [ - 30m | ]
+- new mill formed check [ - 30m | ]? 
 - get players mills [ - 5m | ]
-- all players pieces in mill check [ - 5m | ]
+- all players pieces in mill check [ - 5m | ]?
+- game flow [ - 5h | ]
 
 Note: [name - estimated time | actual time]
 

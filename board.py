@@ -132,7 +132,9 @@ class Player:
         
 
     def move_piece(self, piece: Piece, location: str):
-        return self.board.move_piece(piece, location)
+        if piece.player is self:
+            return self.board.move_piece(piece, location)
+        return False
         
     def get_placed_pieces(self):
         placed = []
@@ -240,6 +242,23 @@ class Board:
 
     def get_nodes(self):
         return list(self.board.values())
+
+    def get_mills(self):
+        mills = set()
+        for node in self.board:
+                east = node.east
+                east_east = east.east if east else None
+
+                west = node.west
+                west_west = west.west if west else None
+
+                north = node.north
+                north_north = north.north if north else None
+                
+                south = node.south
+                south_south = south.south if south else None
+
+
 
 def main():
     pass
