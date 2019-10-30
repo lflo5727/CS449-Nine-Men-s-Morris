@@ -143,6 +143,12 @@ class Player:
                 placed.append(piece)
         return placed
 
+    def get_mills(self):
+        return [x for x in self.board.get_mills() if x.player is self]
+
+    def get_removable_pieces(self):
+        return list(set(self.get_placed_pieces()) - set(self.get_mills()))
+
     def get_phase(self):
         if self.pieces:
             return 1
@@ -244,20 +250,36 @@ class Board:
         return list(self.board.values())
 
     def get_mills(self):
-        mills = set()
-        for node in self.board:
-                east = node.east
-                east_east = east.east if east else None
-
-                west = node.west
-                west_west = west.west if west else None
-
-                north = node.north
-                north_north = north.north if north else None
+        def is_same_player(a, b, c):
+            try:
+                result = a.piece.player == b.piece.player and b.piece.player == c.piece.player
+            except AttributeError:
+                result = False
+            return result
                 
-                south = node.south
-                south_south = south.south if south else None
+        mills = set()
+        for curr in self.get_nodes():
+            east = curr.east
+            east_east = east.east if east else None
 
+            west = curr.west
+            west_west = west.west if west else None
+
+            north = curr.north
+            north_north = north.north if north else None
+            
+            south = curr.south
+            south_south = south.south if south else None
+
+            if (is_same_player(curr, east, east_east) or 
+                is_same_player(curr, west, west_west) or 
+                is_same_player(curr, east, west) or 
+                is_same_player(curr, north, north_north) or 
+                is_same_player(curr, south, south_south) or 
+                is_same_player(curr, north, south)):
+                mills.add(curr.piece)
+
+        return mills
 
 
 def main():
