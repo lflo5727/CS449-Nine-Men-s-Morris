@@ -1,9 +1,14 @@
-import random
-import itertools
+import logging
 import pygame
 
 from board import Node, Piece, Board, Player
 from gui import Gui
+
+log = logging.getLogger("game_flow")
+logging.basicConfig(level="INFO")
+
+GAME_STATE = "STARTING"
+
 
 def main():
     clock = pygame.time.Clock()
@@ -12,12 +17,14 @@ def main():
     player1 = Player("Player 1", board)
     player2 = Player("Player 2", board)
     gui = Gui(board, player1, player2)
-        
+    
     selected_piece = None
     piece_prev_pos = None
 
-    current_player = gui.player1
-    current_player_grid = gui.player1_grid
+    current_player = player1
+    log.info("%s turn", current_player)
+
+    GAME_STATE = "RUNNING"
     while True:
         events = pygame.event.get()
         mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) 
@@ -26,45 +33,60 @@ def main():
             if e.type == pygame.QUIT:
                 return
             if e.type == pygame.MOUSEBUTTONDOWN:
-                if selected_piece is None and (player1.pieces or player2.pieces):
-                    selected_piece = gui.get_player_piece_at_vector(current_player_grid, mouse_pos)
+                if selected_piece is None and (player1.get_phase() == 1 or player2.get_phase() == 1):
+                    selected_piece = gui.get_piece(mouse_pos)
                     if selected_piece is not None:
-                        if current_player_grid[selected_piece][2].node is not None:
+                        if selected_piece.piece.player is not current_player or selected_piece.piece.is_placed():
                             selected_piece = None
                         else:
-                            piece_prev_pos = (current_player_grid[selected_piece][0], current_player_grid[selected_piece][1])
+                            log.info("Piece %s picked up.", selected_piece)
+                            piece_prev_pos = selected_piece.xy
+                elif selected_piece is None and (player1.get_phase() > 1 or player2.get_phase() > 1):
+                    selected_piece = gui.get_piece(mouse_pos)
+                    if selected_piece is not None:
+                        if selected_piece.piece.player is not current_player:
+                            selected_piece = None
+                        else:
+                            log.info("Piece %s picked up.", selected_piece)
+                            piece_prev_pos = selected_piece.xy
             if e.type == pygame.MOUSEBUTTONUP:
                 if selected_piece is not None:
-                    node_name = gui.get_node_at_vector(mouse_pos)
-                    if node_name is not None and current_player.place_piece(current_player_grid[selected_piece][2], node_name):
-                        x, y, _ = gui.board_grid[node_name]
-                        gui.set_player_piece_xy(current_player_grid, selected_piece, x, y)
+                    node = gui.get_node(mouse_pos)
+                    if node is not None:
+                        moved = None
+                        if current_player.get_phase() == 1:
+                            moved = current_player.place_piece(selected_piece.piece.id, node.node.name)
+                        elif current_player.get_phase() > 1:
+                            moved = current_player.move_piece(selected_piece.piece, node.node.name)
 
-                        if current_player is gui.player1:
-                            current_player = gui.player2
-                            current_player_grid = gui.player2_grid
+                        if moved:
+                            selected_piece.move(*node.xy)
+
+                        if current_player is player1:
+                            current_player = player2
                         else:
-                            current_player = gui.player1
-                            current_player_grid = gui.player1_grid
+                            current_player = player1
+                        log.info("%s turn", current_player)
                     else:
+                        log.info("Piece cannot be placed. No node under mouse.")
                         x, y = piece_prev_pos
-                        gui.set_player_piece_xy(current_player_grid, selected_piece, x, y)
-                        
+                        selected_piece.move(*piece_prev_pos)
                 selected_piece = None
 
-        gui.screen.fill(pygame.Color('#dddddd'))
-        gui.screen.blit(gui.board_surface, (0, 0))
         gui.draw_board()
-        if(not player1.pieces and not player2.pieces):
-            gui.game_message("We're out of pieces!")
+        if GAME_STATE == "RUNNING":
+            if not player1.pieces and not player2.pieces:
+                log.info("Game finished. No more pieces.")
+                #GAME_STATE = "CLOSED"
+            else:
+                gui.game_message("%s turn" % (current_player))
         else:
-            gui.game_message("%s TURN" % (current_player))
-        
+            gui.game_message("We're out of pieces!")
+            
         if selected_piece is not None:
-            gui.set_player_piece_xy(current_player_grid, selected_piece, mouse_pos.x, mouse_pos.y)
-        gui.draw_player_pieces(gui.player1_grid, pygame.Color('#E34996'))
-        gui.draw_player_pieces(gui.player2_grid, pygame.Color('#96E349'))
-        gui.debug_message(str(pygame.mouse.get_pos()), gui.hover_and_tell())
+            selected_piece.move(*mouse_pos)
+        gui.draw_pieces()
+        gui.debug_message(str(mouse_pos), gui.tell(mouse_pos))
         pygame.display.flip()
         clock.tick(60)
 

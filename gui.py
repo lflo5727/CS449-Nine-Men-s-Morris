@@ -1,6 +1,9 @@
-import random
+import logging
 import pygame
 import pygame.gfxdraw
+
+log = logging.getLogger(__name__)
+pygame.init()
 
 WIN_SIZE = (640, 480)
 TILESIZE = 48
@@ -10,145 +13,185 @@ Y_OFFSET = 120
 Y_OFFSET_PLAYER = 70
 RADIUS = 20
 
-
-class Circle:
-    def __init__(self, x_center, y_center, r, color, outline = None):
-        self.x_center = x_center
-        self.y_center = y_center
-        self.r = r
-        self.color = color
-        self.outline = outline
-
-    def draw(self, surface):
-        if self.outline:
-            bg_circ_def = (surface, self.x_center, self.y_center, self.r, self.outline)
-            pygame.gfxdraw.aacircle(*bg_circ_def)
-            pygame.gfxdraw.filled_circle(*bg_circ_def)
-        circ_def = (surface, self.x_center, self.y_center, (self.r - 2) if self.outline else self.r, self.color)
-        pygame.gfxdraw.aacircle(*circ_def)
-        pygame.gfxdraw.filled_circle(*circ_def)
-        
-
-class Line:
-    def __init__(self, x1, y1, x2, y2, width, color):
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
-        self.width = width
-        self.color = color
-
-    def draw(self, surface):
-        pygame.draw.line(surface, self.color, (self.x1, self.y1), (self.x2, self.y2), self.width)
-        
-
 class Gui:
-    def __init__(self, board, player1, player2):
-        self.board = board
-        self.player1 = player1
-        self.player1_grid = {}
-        self.player2 = player2
-        self.player2_grid = {}
+    class Line:
+        def __init__(self, x1, y1, x2, y2):
+            self.x1 = x1
+            self.y1 = y1
+            self.x2 = x2
+            self.y2 = y2
 
-        pygame.init()
-        self.font12 = pygame.font.Font('assets/GameCube.ttf', 12)
-        self.font48 = pygame.font.Font('assets/GameCube.ttf', 48)
-        self.screen = pygame.display.set_mode(WIN_SIZE)
-        self.board_surface = pygame.Surface(WIN_SIZE)
-        
-        self.board_grid = None
-        self.board_lines = None
-        self.create_board()
-        self.create_players_pieces()
+        def draw(self, surface):
+            pygame.draw.line(surface, pygame.Color('#aaaaaa'), (self.x1, self.y1), (self.x2, self.y2), 5)
 
-    def create_board(self):
-        def calc_node_pos(node_name):
-            col = ord(node_name[0]) - ord('a')
-            row = 7 - int(node_name[1])
-            return (col, row)
+    class Circle:
+        def __init__(self, x, y, color, outline = None, r = RADIUS):
+            self.x = int(x)
+            self.y = int(y)
+            self.r = int(r)
+            self.color = color
+            self.outline = outline
 
-        def calc_node_center(col, row):
-            col_center = col * TILESIZE + X_OFFSET + TILESIZE // 2
-            row_center = row * TILESIZE + Y_OFFSET + TILESIZE // 2
-            return (col_center, row_center)
-        
-        self.board_grid = {}
-        self.board_lines = []
+        @property
+        def v(self):
+            return pygame.math.Vector2(self.x, self.y)
 
-        for node_name, node in self.board.board.items():
-            col, row = calc_node_pos(node_name)
-            col_center, row_center = calc_node_center(col, row)
-            for n in [node.east, node.south]:
-                if n:
-                    temp_node_name = n.name
-                    temp_col, temp_row = calc_node_pos(temp_node_name)
-                    temp_col_center, temp_row_center = calc_node_center(temp_col, temp_row)
-                    self.board_lines.append(Line(col_center, row_center, temp_col_center, temp_row_center, 5, pygame.Color('#aaaaaa')))
-            self.board_grid[node_name] = (col_center, row_center, node)
+        @property
+        def xy(self):
+            return (self.x, self.y)
+
+        def draw(self, surface):
+            if self.outline:
+                bg_circ_def = (surface, self.x, self.y, self.r, self.outline)
+                pygame.gfxdraw.aacircle(*bg_circ_def)
+                pygame.gfxdraw.filled_circle(*bg_circ_def)
+            circ_def = (surface, self.x, self.y, (self.r - 2) if self.outline else self.r, self.color)
+            pygame.gfxdraw.aacircle(*circ_def)
+            pygame.gfxdraw.filled_circle(*circ_def)
+
+        def distance_to(self, vector):
+            return self.v.distance_to(vector)
+
+        def move(self, x, y):
+            self.x = int(x)
+            self.y = int(y)
+
+
+    class Node(Circle):
+        def __init__(self, x, y, node):
+            super().__init__(x, y, pygame.Color('#aaaaaa'), r = RADIUS - 1 )
+            self.node = node
     
+        def __repr__(self) -> str:
+            return '[NODE] %s' % (self.node)
+
+        def draw(self, surface):
+            super().draw(surface)
+            text = pygame.font.Font('assets/GameCube.ttf', 12).render(self.node.name, True, pygame.Color('#dddddd'))
+            surface.blit(text, text.get_rect(center=self.v))
+
+        def move(self, *args, **kwargs):
+            log.error("Can not move a Node!")
+
+
+    class Piece(Circle):
+        def __init__(self, x, y, color, piece):
+            super().__init__(x, y, color, outline = pygame.Color('#ffffff'))
+            self.piece = piece
+
+        def __repr__(self) -> str:
+            return '[PIECE] %s' % (self.piece)
+
+
+    class Board:
+        def __init__(self, board):
+            self.surface = pygame.Surface(WIN_SIZE)
+            self.board = board
+            self.nodes = None
+            self.edges = None
+            self.create()
+
+        def create(self):
+            def calc_node_center(node_name):
+                col = ord(node_name[0]) - ord('a')
+                row = 7 - int(node_name[1])
+                x = col * TILESIZE + X_OFFSET + TILESIZE // 2
+                y = row * TILESIZE + Y_OFFSET + TILESIZE // 2
+                return (x, y)
+            
+            self.nodes = {}
+            self.edges = []
+
+            for node_name, node in self.board.items():
+                x, y = calc_node_center(node_name)
+                self.nodes[node_name] = Gui.Node(x, y, node)
+                for neighbor in filter(lambda x: x is not None, [node.east, node.south]):
+                    neighbor_x, neighbor_y = calc_node_center(neighbor.name)
+                    self.edges.append(Gui.Line(x, y, neighbor_x, neighbor_y))
+        
+        def draw(self, screen):
+            self.surface.fill(pygame.Color('#dddddd'))
+            self.surface.blit(pygame.image.load('assets/background.png'), (0,0))
+
+            font48 = pygame.font.Font('assets/GameCube.ttf', 48)
+            
+            title = font48.render("Nine men's morris", True, pygame.Color('#ffffff'))
+            title_shadow = font48.render("Nine men's morris", True, pygame.Color('#7a8a9a'))
+            
+            self.surface.blit(title_shadow, title_shadow.get_rect(center=(WIN_SIZE[0]//2, 24)).move(2, 2))
+            self.surface.blit(title, title.get_rect(center=(WIN_SIZE[0]//2, 24)))
+
+            for edge in self.edges:
+                edge.draw(self.surface)
+                
+            for node in self.nodes.values():
+                node.draw(self.surface)
+
+            screen.blit(self.surface, (0, 0))
+
+
+    class Player:
+        def __init__(self, id, player):
+            self.id = id
+            if self.id == 1:
+                self.color =  pygame.Color('#E34996')
+                self.placemat_degree = 90
+                self.placemat_x_calc = lambda self, w: w // 2
+            elif self.id == 2:
+                self.color =  pygame.Color('#96E349')
+                self.placemat_degree = 270
+                self.placemat_x_calc = lambda self, w: WIN_SIZE[0] - w // 2
+
+            self.player = player
+            self.pieces = {}
+            self.create()
+
+        def create(self):
+            if self.id == 1:
+                x = X_OFFSET // 2
+            elif self.id == 2:
+                x = WIN_SIZE[0] - X_OFFSET // 2
+
+            for piece_id, piece in self.player.pieces.items():
+                y = piece_id * (RADIUS * 2 + 5) + Y_OFFSET_PLAYER + 5 + RADIUS // 2
+                self.pieces[piece_id] = Gui.Piece(x, y, self.color, piece)
+
+        def draw(self, screen):
+            font48 = pygame.font.Font('assets/GameCube.ttf', 48)
+            placemat = font48.render(self.player.name, True, pygame.Color('#cccccc'))
+            placemat = pygame.transform.rotate(placemat, self.placemat_degree)
+            screen.blit(placemat, placemat.get_rect(center=(self.placemat_x_calc(self, placemat.get_width()), WIN_SIZE[1] // 2 + Y_OFFSET_PLAYER // 2)))
+            
+            for piece in self.pieces.values():
+                piece.draw(screen)
+        
+
+    def __init__(self, board, player1, player2):
+        self.board = Gui.Board(board.board)
+        self.players = {1: Gui.Player(1, player1), 2: Gui.Player(2, player2)}
+        self.screen = pygame.display.set_mode(WIN_SIZE)
+
+    def get_piece(self, vector):
+        for player in self.players.values():
+            for piece in player.pieces.values():
+                if piece.distance_to(vector) <= RADIUS:
+                    return piece
+
+    def get_node(self, vector):
+        for node in self.board.nodes.values():
+            if node.distance_to(vector) <= RADIUS:
+                return node
+
+    def tell(self, vector):
+        result = [self.get_node(vector), self.get_piece(vector)]
+        return ', '.join([str(x) for x in result if x])
+
     def draw_board(self):
-        self.board_surface.fill(pygame.Color('#dddddd'))
+        self.board.draw(self.screen)
 
-        p1_placemat = self.font48.render(self.player1.name, True, pygame.Color('#cccccc'))
-        p1_placemat = pygame.transform.rotate(p1_placemat, 90)
-        self.board_surface.blit(p1_placemat, p1_placemat.get_rect(center=(p1_placemat.get_width() // 2, WIN_SIZE[1] // 2 + Y_OFFSET_PLAYER // 2)))
-        p2_placemat = self.font48.render(self.player2.name, True, pygame.Color('#cccccc'))
-        p2_placemat = pygame.transform.rotate(p2_placemat, 270)
-        self.board_surface.blit(p2_placemat, p2_placemat.get_rect(center=(WIN_SIZE[0] - p2_placemat.get_width() // 2, WIN_SIZE[1] // 2 + Y_OFFSET_PLAYER // 2)))
-
-        title = self.font48.render("Nine men's morris", True, pygame.Color('#ffffff'))
-        title_shadow = self.font48.render("Nine men's morris", True, pygame.Color('#7a8a9a'))
-        self.board_surface.blit(title_shadow, title_shadow.get_rect(center=(WIN_SIZE[0]//2, 24)).move(1, 1))
-        self.board_surface.blit(title, title.get_rect(center=(WIN_SIZE[0]//2, 24)))
-
-        for line in self.board_lines:
-            line.draw(self.board_surface)
-        for name, grid_info in self.board_grid.items():
-            centers = (grid_info[0], grid_info[1])
-            circ = Circle(centers[0], centers[1], RADIUS - 1, pygame.Color('#aaaaaa'))
-            text = self.font12.render(name, True, pygame.Color('#dddddd'))
-            circ.draw(self.board_surface)
-            self.board_surface.blit(text, text.get_rect(center=centers))
-
-    def create_players_pieces(self):
-        self.create_pieces(self.player1, self.player1_grid, 1)
-        self.create_pieces(self.player2, self.player2_grid, 2)
-
-    def create_pieces(self, player, player_grid, start_pos):
-        col_center = X_OFFSET // 2
-        if start_pos == 2:
-            col_center = WIN_SIZE[0] - X_OFFSET // 2
-
-        for i, piece in enumerate(player.pieces):
-            row_center = i * (RADIUS * 2 + 5) + Y_OFFSET_PLAYER + 5 + RADIUS // 2
-            player_grid[i] = (col_center, row_center, piece)
-
-    def draw_player_pieces(self, player_grid, color):
-        for _, piece_info in player_grid.items():
-            col_center, row_center, _ = piece_info
-            circ = Circle(col_center, row_center, RADIUS, color, pygame.Color('#ffffff'))
-            circ.draw(self.screen)
-
-    def get_player_piece_at_vector(self, player_grid, vector):
-        for piece_id, piece_info in player_grid.items():
-            col_center, row_center, piece = piece_info
-            piece_pos = pygame.Vector2(col_center, row_center)
-            if piece_pos.distance_to(vector) <= RADIUS:
-                return piece_id
-
-    def get_node_at_vector(self, vector):
-        for node_name, node_info in self.board_grid.items():
-            col_center, row_center, node = node_info
-            node_pos = pygame.Vector2(col_center, row_center)
-            if node_pos.distance_to(vector) <= RADIUS:
-                return node_name
-
-    def set_player_piece_xy(self, player_grid, piece_id, x, y):
-        player_grid[piece_id] = (
-            int(x),
-            int(y),
-            player_grid[piece_id][2]
-        )
+    def draw_pieces(self):
+        for player in self.players.values():
+            player.draw(self.screen)
 
     def game_message(self, *args):
         font = pygame.font.Font('assets/Monoid-Bold.ttf', 18)
@@ -159,25 +202,7 @@ class Gui:
         font = pygame.font.Font('assets/Monoid-Regular.ttf', 12)
         text = font.render(', '.join([m for m in args if m]), True, pygame.Color('#aaaaaa'))
         self.screen.blit(text, text.get_rect(center=(WIN_SIZE[0]//2, WIN_SIZE[1] - text.get_height()//2)))
-            
-    def hover_and_tell(self):
-        # node < piece
-        mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) 
-
-        for player_grid in [self.player1_grid, self.player2_grid]:
-            for piece_id, piece_info in player_grid.items():
-                centers = (piece_info[0], piece_info[1])
-                piece = piece_info[2]
-                piece_pos = pygame.Vector2(centers)
-                if piece_pos.distance_to(mouse_pos) <= RADIUS:
-                    return "PIECE - [%s]%s" % (piece_id + 1, piece)
-
-        for node_name, grid_info in self.board_grid.items():
-            centers = (grid_info[0], grid_info[1])
-            node_pos = pygame.Vector2(centers)
-            if node_pos.distance_to(mouse_pos) <= RADIUS:
-                return "NODE - %s" % (node_name)
-        
+             
 
 def main():
     pass
