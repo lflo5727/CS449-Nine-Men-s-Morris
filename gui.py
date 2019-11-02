@@ -156,6 +156,9 @@ class Gui:
                 y = piece_id * (RADIUS * 2 + 5) + Y_OFFSET_PLAYER + 5 + RADIUS // 2
                 self.pieces[piece_id] = Gui.Piece(x, y, self.color, piece)
 
+        def remove_piece(self, piece_id):
+            del self.pieces[piece_id]
+
         def draw(self, screen):
             font48 = pygame.font.Font('assets/GameCube.ttf', 48)
             placemat = font48.render(self.player.name, True, pygame.Color('#cccccc'))

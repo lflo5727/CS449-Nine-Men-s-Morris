@@ -63,7 +63,7 @@ class Piece:
     def __repr__(self) -> str:
         # Useful in debugging. This will just print the Player and Node
         # location when the class instance is printed
-        return "%s - %d @ %s" % (self.player.name, self.id, self.node.name if self.node else "None")
+        return "%s - %d @ %s" % (getattr(self.player, 'name', 'None'), self.id, getattr(self.node, 'name', 'None'))
 
     def is_placed(self):
         return bool(self.node)
@@ -88,7 +88,7 @@ class Player:
         # when the class instance is printed
         return self.name
         
-    def place_piece(self, piece_id: int, location: str) -> bool:
+    def place_piece(self, piece: Piece, location: str) -> bool:
         """Place a piece from the players hand on the board
 
         Args:
@@ -99,11 +99,11 @@ class Player:
         """
 
         if self.pieces:
-            if piece_id not in self.pieces:
+            if piece not in self.pieces.values():
                 log.error("Piece cannot be placed. It is not in the players hand.")
                 return False
-            if self.board.place_piece(self.pieces[piece_id], location):
-                del self.pieces[piece_id]
+            if self.board.place_piece(piece, location):
+                del self.pieces[piece.id]
                 return True
         log.error("Piece cannot be placed. There are no pieces in the players hand.")
         return False
@@ -117,17 +117,22 @@ class Player:
                 if node.is_empty():
                     moves.add(node.name)
         elif phase == 2:
-            for node in self.board.get_nodes():
-                if node.player is self:
-                    for neighbor_node in node.neighbors():
-                        if neighbor_node.is_empty():
-                            moves.add(neighbor_node.name)
+            for placed_piece in self.get_placed_pieces():
+                node = placed_piece.node
+                for neighbor_node in node.neighbors():
+                    if neighbor_node.is_empty():
+                        moves.add(neighbor_node.name)
         return moves
 
     def remove_piece(self, piece):
         # remove this players piece
         if piece.player is self:
-            return self.board.remove_piece(piece)
+            if (piece in self.get_placed_pieces() and 
+                (piece in self.get_removable_pieces() or
+                not self.get_removable_pieces())):
+                return self.board.remove_piece(piece)
+            else:
+                log.info("Can not remove %s piece. Piece is part of a mill.", piece)
         return False
         
 
@@ -235,9 +240,14 @@ class Board:
     def remove_piece(self, piece: Piece):
         node = piece.node
         node.piece = None
+        return True
 
     def move_piece(self, piece: Piece, location: str):
-        return self.place_piece(piece, location)
+        node = piece.node
+        if self.place_piece(piece, location):
+            node.piece = None
+            return True
+        return False
 
     def get_pieces(self):
         pieces = []
