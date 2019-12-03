@@ -14,8 +14,8 @@ def main():
     clock = pygame.time.Clock()
 
     board = Board()
-    player1 = Player("Player 1", board)
-    player2 = Player("Player 2", board)
+    player1 = Player("Player 1", 1, board)
+    player2 = Player("Player 2", 2, board)
     gui = Gui(board, player1, player2)
     
    

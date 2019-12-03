@@ -77,8 +77,9 @@ class Player:
         pieces: Dict of pieces in the players hand
     """
 
-    def __init__(self, name, board: "Board"):
+    def __init__(self, name, id, board: "Board"):
         self.name: str = name
+        self.id: int = id
         self.board: "Board" = board
         self.pieces: Dict[int, Piece] = {x: Piece(x, self) for x in range(9)}
         log.info("Player created: %s", str(self))
@@ -175,47 +176,38 @@ class Board:
     Attributes:
         board: Dictionary of nodes that represents the board. key: Node name
     """
+    node_map = {
+        'a7': ['d7','a4'], 'd7': ['g7','d6'], 'g7': ['g4'],
+        'b6': ['d6','b4'], 'd6': ['f6','d5'], 'f6': ['f4'],
+        'c5': ['d5','c4'], 'd5': ['e5'], 'e5': ['e4'],
+        'a4': ['b4','a1'], 'b4': ['c4','b2'], 'c4': ['c3'],
+        'e4': ['f4','e3'], 'f4': ['g4','f2'], 'g4': ['g1'],
+        'c3': ['d3'], 'd3': ['e3','d2'], 'e3':[],
+        'b2': ['d2'], 'd2': ['f2','d1'], 'f2':[],
+        'a1': ['d1'], 'd1': ['g1'], 'g1': []
+    }
 
     def __init__(self):
-        self.board: Dict[str, Node] = {}
-        self.create_board()
+        self.board: Dict[str, Node] = self.create_board()
 
     def create_board(self):
-        """Creates the board nodes and the relationships between them.
-        """
-        node_map = {
-            'a7': ['d7','a4'], 'd7': ['g7','d6'], 'g7': ['g4'],
-            'b6': ['d6','b4'], 'd6': ['f6','d5'], 'f6': ['f4'],
-            'c5': ['d5','c4'], 'd5': ['e5'], 'e5': ['e4'],
-            'a4': ['b4','a1'], 'b4': ['c4','b2'], 'c4': ['c3'],
-            'e4': ['f4','e3'], 'f4': ['g4','f2'], 'g4': ['g1'],
-            'c3': ['d3'], 'd3': ['e3','d2'], 'b2': ['d2'],
-            'd2': ['f2','d1'], 'a1': ['d1'], 'd1': ['g1']
-        }
-
-        def create_node(name, neighbors: List[str]):
-            """Recursivly create the board nodes and stitch the nodes together
-            maintaining each nodes forward and reverse relationships with each other.
-            """
-            node = None
-            self.board[name] = Node(name)
-            node = self.board[name]
+        board: Dict[str, Node] = {}
+        for name, neighbors in node_map.items():
+            if name not in board:
+                board[name] = Node(name)
+            node = board[name]
             for neighbor in neighbors:
-                if neighbor not in self.board:
-                    create_node(neighbor, node_map.get(neighbor,[]))
-
-                neigh_node = self.board[neighbor]
+                if neighbor not in board:
+                    board[neighbor] = Node(neighbor)
+                neigh_node = board[neighbor]
+                
                 if neighbor[1] == name[1]: #east/west
                     node.east = neigh_node
                     neigh_node.west = node
                 else:
                     node.south = neigh_node #north/south
                     neigh_node.north = node
-
-        for name, neighbors in node_map.items():
-            if name not in self.board:
-                create_node(name, neighbors)
-        log.info("Created board nodes")
+        return board
 
     def place_piece(self, piece: Piece, location: str) -> bool:
         """Place a piece on the board
