@@ -192,7 +192,7 @@ class Board:
 
     def create_board(self):
         board: Dict[str, Node] = {}
-        for name, neighbors in node_map.items():
+        for name, neighbors in Board.node_map.items():
             if name not in board:
                 board[name] = Node(name)
             node = board[name]
