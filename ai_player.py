@@ -39,7 +39,7 @@ class SimulatedBoard:
         sim_board.board = dict(self.board)
         return sim_board
 
-    def get_opponent(self, p_id)
+    def get_opponent(self, p_id):
         return self.p2_id if p_pi == self.p1_id else self.p1_id
 
     def do(self, move):
@@ -87,9 +87,6 @@ class SimulatedBoard:
     def evaluate_board(self, curr_player):
         score = 0
 
-        player_mill_cnt, player_part_mill_cnt = 0, 0
-        opponent_mill_cnt, opponent_part_mill_cnt = 0, 0
-
         for check in [SimulatedBoard.ns_check, SimulatedBoard.ew_check]:
             player_pieces, opponent_pieces, empty = 0, 0, 0
             if check == SimulatedBoard.ns_check:
@@ -111,36 +108,31 @@ class SimulatedBoard:
                         empty += 1
                 
             if player_pieces == 3:
-				player_mill_cnt += 1
-			elif player_pieces == 2 and empty == 1 
-				player_part_mill_cnt += 1
-            elif player_pieces == 1 and empty == 2 
+                score += 100
+            elif player_pieces == 2 and empty == 1:
+                score += 10
+            elif player_pieces == 1 and empty == 2:
                 score += 1
-            elif opponent_pieces == 3 
-                opponent_mill_cnt += 1
-            elif opponent_pieces == 2 and empty == 1 
-                opponent_part_mill_cnt += 1
-            elif opponent_pieces == 1 and empty == 2 
+            elif opponent_pieces == 3:
+                score += -100
+            elif opponent_pieces == 2 and empty == 1:
+                score += -10
+            elif opponent_pieces == 1 and empty == 2:
                 score += -1
-			
-		for node, player in self.board.items():
+            
+        for node, player in self.board.items():
             sub_score = 0
             if node in ['d2', 'd6', 'b4', 'f4']:
                 sub_score = 2
             elif node in ['a4', 'c4', 'd1', 'd3', 'd5', 'd7', 'e4', 'g4']:
                 sub_score = 1
             
-            if player = curr_player:
+            if player == curr_player:
                 score += sub_score
             else:
                 score = -sub_score
 
-
-        
-
-    
-
-                    
+        return score
 
 class AI_Player(Player):
     def __init__(self, name, id, board: "Board", opponent: "Player"):
