@@ -73,6 +73,7 @@ class Player:
 
     Attributes:
         name: Name of the player
+        id: Unique int of player
         board: Current board the player is playing on
         pieces: Dict of pieces in the players hand
     """
