@@ -4,7 +4,7 @@ import itertools
 
 from board import Node, Piece, Board, Player, Phase, MAX_NUM_PIECES, MIN_NUM_PIECES
 from ai_player import AI_Player
-from gui import Gui
+from gui import Gui, Choice, WIN_SIZE
 
 log = logging.getLogger("game_flow")
 logging.basicConfig(level="INFO")
@@ -13,14 +13,35 @@ GAME_STATE = "STARTING"
 
 def main():
     clock = pygame.time.Clock()
-
+    turns = 0
     board = Board()
     player1 = Player("Player 1", 1, board)
-    player2 = AI_Player("Computer", 2, board, player1)
-    #player2 = Player("Player 2", 2, board)
+
+    play_ai = None
+    choice = Choice("Human", "Computer")
+    screen = pygame.display.set_mode(WIN_SIZE)
+    while play_ai is None:
+        events = pygame.event.get()
+        mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) 
+        
+        for e in events:
+            if e.type == pygame.QUIT:
+                return
+            if e.type == pygame.MOUSEBUTTONDOWN:
+                if play_ai is None:
+                    picked = choice.is_clicked(mouse_pos)
+                    if picked == 1:
+                        play_ai = False
+                        player2 = Player("Player 2", 2, board)
+                    elif picked == 2:
+                        play_ai = True
+                        player2 = AI_Player("Computer", 2, board, player1)
+        choice.draw(screen)
+
+        pygame.display.flip()
+        clock.tick(60)
+
     gui = Gui(board, player1, player2)
-    
-   
     player_toggle = itertools.cycle([player1, player2])   
     current_player = next(player_toggle)
 
@@ -31,15 +52,23 @@ def main():
 
     game_won_by = None
     while True:
-
         if isinstance(current_player, AI_Player):
+            if turns < 3:
+                AI_Player.DEPTH = 2
+            elif turns < 9:
+                AI_Player.DEPTH = 3
+            elif current_player.get_phase() == Phase.FLYING:
+                AI_Player.DEPTH = 2
+            else:
+                AI_Player.DEPTH = 4
             move = current_player.get_best_move()
+            log.info("Move score: %d", move.score)
             if move.phase == Phase.PLACING:
                 piece = list(current_player.pieces.values())[0] 
                 if current_player.place_piece(piece, move.dest):
                     node = gui.find_node(board.board[move.dest])
                     gui.find_piece(piece).move(*node.xy)
-                    log.info("Computer placed %s", piece)
+                    log.info("Placed %s", piece)
                 else:
                     log.critical("AI BROKE. COULD NOT PLACE.")
             else:
@@ -47,7 +76,7 @@ def main():
                 if current_player.move_piece(piece, move.dest):
                     node = gui.find_node(board.board[move.dest])
                     gui.find_piece(piece).move(*node.xy)
-                    log.info("Computer moved %s piece from %s to %s", piece, move.src, move.dest)
+                    log.info("Moved %s piece from %s", piece, move.src)
                 else:
                     log.critical("AI BROKE. COULD NOT MOVE.")
 
@@ -63,6 +92,7 @@ def main():
                     log.critical("AI BROKE. COULD NOT REMOVE.")
                 next(player_toggle) # skip the next cycle to return to normal
             current_player = next(player_toggle)
+            turns += 1
 
         events = pygame.event.get()
         mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) 

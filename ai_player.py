@@ -1,11 +1,14 @@
 from typing import List, Dict
 from enum import Enum
 
-import logging, math, random
+import logging, math, random, sys
 
 from board import MAX_NUM_PIECES, MIN_NUM_PIECES, Board, Player, Phase
 
 log = logging.getLogger(__name__)
+
+MAXINT = sys.maxsize
+MININT = -sys.maxsize -1
 
 class Move:
     def __init__(self, player_id, phase, src = None, dest = None, remove = None):
@@ -170,23 +173,20 @@ class SimulateGame:
                         opponent_pieces += 1
                     else:
                         empty += 1
-                
-            if player_pieces == 3:
-                score += 100
-            elif player_pieces == 2 and empty == 1:
-                score += 10
-            elif player_pieces == 1 and empty == 2:
-                score += 1
-            elif opponent_pieces == 3:
-                score += -100
-            elif opponent_pieces == 2 and empty == 1:
-                score += -10
-            elif opponent_pieces == 1 and empty == 2:
-                score += -1
-            elif player_pieces == 2 and opponent_pieces == 1: #may need tuning
-                score += -5
-            elif opponent_pieces == 2 and player_pieces == 1:
-                score += 5
+            
+
+                if player_pieces == 3:
+                    score += 100
+                elif player_pieces == 2 and empty == 1:
+                    score += 10
+                elif player_pieces == 1 and empty == 2:
+                    score += 1
+                elif opponent_pieces == 3:
+                    score += -100
+                elif opponent_pieces == 2 and empty == 1:
+                    score += -10
+                elif opponent_pieces == 1 and empty == 2:
+                    score += -1
             
         for node, player in self.board.items():
             sub_score = 0
@@ -203,15 +203,25 @@ class SimulateGame:
         return score
 
     def game_over(self, p_id):
-        return self.player_data[p_id]['num_on_board'] < MIN_NUM_PIECES
+        if self.get_phase(p_id) != Phase.PLACING:
+            return self.player_data[p_id]['num_on_board'] < MIN_NUM_PIECES
+        else:
+            return False
 
 class AI_Player(Player):
-    MAX_SCORE = 9999999
-    DEPTH = 10
+    MAX_SCORE = 999999
+    DEPTH = 5
+    PRUNING = True
 
     def __init__(self, name, id, board: "Board", opponent: "Player"):
         super().__init__(name, id, board)
         self.opponent = opponent
+        self.calls = {
+            'alpha_beta': 0,
+            'evaluate': 0,
+            'generate_moves': 0,
+            'pruned': 0
+        }
     
     def get_best_move(self):
         
@@ -220,7 +230,7 @@ class AI_Player(Player):
         sim_board = SimulateGame(p1_id = self.id, p2_id = self.opponent.id)
         sim_board.set_state(self.board, player1 = self, player2 = self.opponent)
 
-        moves = self.generate_moves(self, sim_board)
+        moves = self.generate_moves(self.id, sim_board)
         
         max_score = -AI_Player.MAX_SCORE
         scored_moves = {}
@@ -228,13 +238,15 @@ class AI_Player(Player):
 
         for move in moves:
             sim_board.do(move)
-            move.score += self.alpha_beta(self, sim_board, AI_Player.DEPTH, -AI_Player.MAX_SCORE, AI_Player.MAX_SCORE)
+            move.score += self.alpha_beta(self.id, sim_board, AI_Player.DEPTH, MININT, MAXINT)
 
-            if move.score >= max_score:
-                if move.score > max_score:
-                    max_score = move.score
-                    scored_moves[max_score] = []
-                scored_moves[max_score].append(move)
+            if move.score > max_score:
+                max_score = move.score
+                
+            if move.score not in scored_moves:
+                scored_moves[move.score] = []
+            
+            scored_moves[move.score].append(move)
 
             sim_board.undo(move)
         if scored_moves[max_score]:
@@ -243,8 +255,11 @@ class AI_Player(Player):
             return None            
 
     def alpha_beta(self, curr_player, sim_board, depth, alpha, beta):
+        self.calls['alpha_beta'] += 1
         opp = sim_board.get_opponent(self.id)
+        
         if depth == 0:
+            self.calls['evaluate'] += 1
             return sim_board.evaluate(self.id)
         elif sim_board.game_over(opp):
             return AI_Player.MAX_SCORE
@@ -254,21 +269,23 @@ class AI_Player(Player):
             moves = self.generate_moves(curr_player, sim_board)
             if not moves and curr_player == self.id:
                 return -AI_Player.MAX_SCORE
-            else:
+            elif not moves and curr_player != self.id:
                 return AI_Player.MAX_SCORE
 
             for move in moves:
                 sim_board.do(move)
                 if curr_player == self.id: #  Maximizing
-                    alpha = math.max(alpha, self.alpha_beta(opp, sim_board, depth - 1, alpha, beta))
+                    alpha = max(alpha, self.alpha_beta(opp, sim_board, depth - 1, alpha, beta))
 
-                    if beta <= alpha:
+                    if beta <= alpha and AI_Player.PRUNING:
+                        self.calls['pruned'] += 1
                         sim_board.undo(move)
                         break
                 else: #  Minimizing
-                    beta = math.max(beta, self.alpha_beta(self, sim_board, depth - 1, alpha, beta))
+                    beta = min(beta, self.alpha_beta(self.id, sim_board, depth - 1, alpha, beta))
 
-                    if beta <= alpha:
+                    if beta <= alpha and AI_Player.PRUNING:
+                        self.calls['pruned'] += 1
                         sim_board.undo(move)
                         break
                 sim_board.undo(move)
@@ -287,42 +304,43 @@ class AI_Player(Player):
         return moves
 
     def generate_moves(self, curr_player, sim_board):
+        self.calls['generate_moves'] += 1
         moves = []
-        opp = sim_board.get_opponent(curr_player.id)
-        phase = sim_board.get_phase(curr_player.id)
+        opp = sim_board.get_opponent(curr_player)
+        phase = sim_board.get_phase(curr_player)
         if phase == Phase.PLACING:
             for node, player in sim_board.board.items():
                 if sim_board.is_empty(node):
-                    move = Move(curr_player.id, Phase.PLACING, dest=node)
+                    move = Move(curr_player, Phase.PLACING, dest=node)
                     sim_board.do(move)
                     mills = sim_board.get_mills()
-                    if node in mills[curr_player.id]:
+                    if node in mills[curr_player]:
                         moves.extend(self.generate_remove_moves(sim_board, move, opp, mills[opp]))
                     else:
                         moves.append(move)
                     sim_board.undo(move)
         elif phase == Phase.MOVING:
             for node, player in sim_board.board.items():
-                if player == curr_player.id:
+                if player == curr_player:
                     for neighbor in SimulateGame.neighbors[node].values():
                         if neighbor and sim_board.is_empty(neighbor):
-                            move = Move(curr_player.id, Phase.MOVING, node, neighbor)
+                            move = Move(curr_player, Phase.MOVING, node, neighbor)
                             sim_board.do(move)
                             mills = sim_board.get_mills()
-                            if neighbor in mills:
+                            if neighbor in mills[curr_player]:
                                 moves.extend(self.generate_remove_moves(sim_board, move, opp, mills[opp]))
                             else:
                                 moves.append(move)
                             sim_board.undo(move)
         elif phase == Phase.FLYING:
             for src_node, src_player in sim_board.board.items():
-                if src_player == curr_player.id:
+                if src_player == curr_player:
                     for dest_node, dest_player in sim_board.board.items():
                         if sim_board.is_empty(dest_node):
-                            move = Move(curr_player.id, Phase.MOVING, src_node, dest_node)
+                            move = Move(curr_player, Phase.MOVING, src_node, dest_node)
                             sim_board.do(move)
                             mills = sim_board.get_mills()
-                            if dest_node in mills[curr_player.id]:
+                            if dest_node in mills[curr_player]:
                                 moves.extend(self.generate_remove_moves(sim_board, move, opp, mills[opp]))
                             else:
                                 moves.append(move)
