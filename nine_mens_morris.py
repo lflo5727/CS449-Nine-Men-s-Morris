@@ -2,7 +2,8 @@ import logging
 import pygame
 import itertools
 
-from board import Node, Piece, Board, Player
+from board import Node, Piece, Board, Player, Phase, MAX_NUM_PIECES, MIN_NUM_PIECES
+from ai_player import AI_Player
 from gui import Gui
 
 log = logging.getLogger("game_flow")
@@ -15,7 +16,8 @@ def main():
 
     board = Board()
     player1 = Player("Player 1", 1, board)
-    player2 = Player("Player 2", 2, board)
+    player2 = AI_Player("Computer", 2, board, player1)
+    #player2 = Player("Player 2", 2, board)
     gui = Gui(board, player1, player2)
     
    
@@ -29,6 +31,32 @@ def main():
 
     game_won_by = None
     while True:
+
+        if isinstance(current_player, AI_Player):
+            move = current_player.get_best_move()
+            if move.phase == Phase.PLACING:
+                piece = list(current_player.pieces.values())[0] 
+                if current_player.place_piece(piece, move.dest):
+                    node = gui.find_node(board.board[move.dest])
+                    gui.find_piece(piece).move(*node.xy)
+                else:
+                    log.critical("AI BROKE. COULD NOT PLACE.")
+            else:
+                piece = board.board[move.src].piece
+                if current_player.move_piece(piece, move.dest):
+                    node = gui.find_node(board.board[move.dest])
+                    gui.find_piece(piece).move(*node.xy)
+
+            if move.remove:
+                other_player = next(player_toggle)
+                piece = board.board[move.remove].piece
+                if other_player.remove_piece(piece):
+                    for player in gui.players.values():
+                        if player.player is piece.player:
+                            player.remove_piece(piece.id)
+                    log.info("Remove %s piece", piece)
+                next(player_toggle) # skip the next cycle to return to normal
+
         events = pygame.event.get()
         mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) 
         
@@ -66,11 +94,11 @@ def main():
             elif node:
                 log.info("Over %s node", node)
                 
-                if current_player.get_phase() == 1:
+                if current_player.get_phase() == Phase.PLACING:
                     if current_player.place_piece(prev_selected_piece.piece, node.node.name):
                         prev_selected_piece.move(*node.xy)
                         action_succesful = True
-                elif (current_player.get_phase() >= 2):
+                else:
                     if node.node in prev_selected_piece.piece.node.neighbors() or current_player.can_fly():
                         if current_player.move_piece(prev_selected_piece.piece, node.node.name):
                             prev_selected_piece.move(*node.xy)
@@ -89,9 +117,9 @@ def main():
             prev_selected_piece = None
         
         
-        if not player1.can_move() or not player1.pieces and len(player1.get_placed_pieces()) < 3 :
+        if not player1.can_move() or not player1.pieces and len(player1.get_placed_pieces()) < MIN_NUM_PIECES:
             game_won_by = player2
-        elif not player2.can_move() or not player1.pieces and len(player2.get_placed_pieces()) < 3:
+        elif not player2.can_move() or not player1.pieces and len(player2.get_placed_pieces()) < MIN_NUM_PIECES:
             game_won_by = player1
 
         gui.draw_board()

@@ -174,6 +174,17 @@ class Gui:
         self.players = {1: Gui.Player(1, player1), 2: Gui.Player(2, player2)}
         self.screen = pygame.display.set_mode(WIN_SIZE)
 
+    def find_piece(self, find_me):
+        for player in self.players.values():
+            for piece in player.pieces.values():
+                if piece.piece.id == find_me.id:
+                    return piece
+
+    def find_node(self, find_me):
+        for node in self.board.nodes.values():
+            if node.node.name == find_me.name:
+                return node
+
     def get_piece(self, vector):
         for player in self.players.values():
             for piece in player.pieces.values():

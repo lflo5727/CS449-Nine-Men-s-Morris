@@ -1,8 +1,18 @@
 from typing import List, Dict
+from enum import Enum
+
 import logging
 
 log = logging.getLogger(__name__)
 
+MAX_NUM_PIECES = 9
+MIN_NUM_PIECES = 3
+
+
+class Phase(Enum):
+    PLACING = 1
+    MOVING = 2
+    FLYING = 3
 
 class Node:
     """A spot on the board.
@@ -82,7 +92,7 @@ class Player:
         self.name: str = name
         self.id: int = id
         self.board: "Board" = board
-        self.pieces: Dict[int, Piece] = {x: Piece(x, self) for x in range(9)}
+        self.pieces: Dict[int, Piece] = {x: Piece(x, self) for x in range(MAX_NUM_PIECES)}
         log.info("Player created: %s", str(self))
 
     def __repr__(self) -> str:
@@ -114,11 +124,11 @@ class Player:
         """  documentation placeholder """
         moves = set()
         phase = self.get_phase()
-        if phase == 1 or phase == 3:
+        if phase == Phase.PLACING or phase == Phase.FLYING:
             for node in self.board.get_nodes():
                 if node.is_empty():
                     moves.add(node.name)
-        elif phase == 2:
+        elif phase == Phase.MOVING:
             for placed_piece in self.get_placed_pieces():
                 node = placed_piece.node
                 for neighbor_node in node.neighbors():
@@ -158,14 +168,14 @@ class Player:
 
     def get_phase(self):
         if self.pieces:
-            return 1
-        elif not self.pieces and len(self.get_placed_pieces()) > 3:
-            return 2
-        elif not self.pieces and len(self.get_placed_pieces()) <= 3:
-            return 3
+            return Phase.PLACING
+        elif not self.pieces and len(self.get_placed_pieces()) > MIN_NUM_PIECES:
+            return Phase.MOVING
+        elif not self.pieces and len(self.get_placed_pieces()) <= MIN_NUM_PIECES:
+            return Phase.FLYING
 
     def can_fly(self):
-        return self.get_phase() == 3
+        return self.get_phase() == Phase.FLYING
 
     def can_move(self):
         return len(self.valid_moves()) > 0 
