@@ -206,8 +206,8 @@ class SimulateGame:
         return self.player_data[p_id]['num_on_board'] < MIN_NUM_PIECES
 
 class AI_Player(Player):
-    MAX_SCORE = 999999
-    DEPTH = 5
+    MAX_SCORE = 9999999
+    DEPTH = 10
 
     def __init__(self, name, id, board: "Board", opponent: "Player"):
         super().__init__(name, id, board)
@@ -248,7 +248,7 @@ class AI_Player(Player):
             return sim_board.evaluate(self.id)
         elif sim_board.game_over(opp):
             return AI_Player.MAX_SCORE
-        elif sim_board.game_over(curr_player):
+        elif sim_board.game_over(self.id):
             return -AI_Player.MAX_SCORE
         else:
             moves = self.generate_moves(curr_player, sim_board)

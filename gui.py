@@ -177,12 +177,12 @@ class Gui:
     def find_piece(self, find_me):
         for player in self.players.values():
             for piece in player.pieces.values():
-                if piece.piece.id == find_me.id:
+                if piece.piece is find_me:
                     return piece
 
     def find_node(self, find_me):
         for node in self.board.nodes.values():
-            if node.node.name == find_me.name:
+            if node.node is find_me:
                 return node
 
     def get_piece(self, vector):

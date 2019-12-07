@@ -39,6 +39,7 @@ def main():
                 if current_player.place_piece(piece, move.dest):
                     node = gui.find_node(board.board[move.dest])
                     gui.find_piece(piece).move(*node.xy)
+                    log.info("Computer placed %s", piece)
                 else:
                     log.critical("AI BROKE. COULD NOT PLACE.")
             else:
@@ -46,6 +47,9 @@ def main():
                 if current_player.move_piece(piece, move.dest):
                     node = gui.find_node(board.board[move.dest])
                     gui.find_piece(piece).move(*node.xy)
+                    log.info("Computer moved %s piece from %s to %s", piece, move.src, move.dest)
+                else:
+                    log.critical("AI BROKE. COULD NOT MOVE.")
 
             if move.remove:
                 other_player = next(player_toggle)
@@ -54,8 +58,11 @@ def main():
                     for player in gui.players.values():
                         if player.player is piece.player:
                             player.remove_piece(piece.id)
-                    log.info("Remove %s piece", piece)
+                    log.info("Computer removed %s piece", piece)
+                else:
+                    log.critical("AI BROKE. COULD NOT REMOVE.")
                 next(player_toggle) # skip the next cycle to return to normal
+            current_player = next(player_toggle)
 
         events = pygame.event.get()
         mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) 
