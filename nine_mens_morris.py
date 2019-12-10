@@ -60,9 +60,6 @@ def start_game():
     game_won_by = None
     while True:
         if isinstance(current_player, AI_Player) and not game_won_by:
-            if current_player.get_phase() == Phase.FLYING:
-                AI_Player.DEPTH = 2
-
             move = current_player.get_best_move()
             log.info("Move score: %d", move.score)
             if move.phase == Phase.PLACING:
@@ -192,6 +189,7 @@ def start_game():
             gui.draw_board()
             gui.game_message("%s WON!" % (game_won_by))
             gui.draw_pieces()
+
             gui.debug_message(str(turns), str(mouse_pos), gui.tell(mouse_pos))
             choice.draw(screen)
             pygame.display.flip()
