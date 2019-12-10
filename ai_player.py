@@ -210,7 +210,7 @@ class SimulateGame:
 
 class AI_Player(Player):
     MAX_SCORE = 999999
-    DEPTH = 5
+    DEPTH = 3
     PRUNING = True
 
     def __init__(self, name, id, board: "Board", opponent: "Player"):
@@ -227,8 +227,9 @@ class AI_Player(Player):
         
         phase = self.get_phase()
 
-        sim_board = SimulateGame(p1_id = self.id, p2_id = self.opponent.id)
-        sim_board.set_state(self.board, player1 = self, player2 = self.opponent)
+        sim_board = SimulateGame(p1_id = self.opponent.id, p2_id = self.id)
+        sim_board.set_state(self.board, player1 = self.opponent, player2 = self)
+        opp = sim_board.get_opponent(self.id)
 
         moves = self.generate_moves(self.id, sim_board)
         
@@ -238,7 +239,7 @@ class AI_Player(Player):
 
         for move in moves:
             sim_board.do(move)
-            move.score += self.alpha_beta(self.id, sim_board, AI_Player.DEPTH, MININT, MAXINT)
+            move.score += self.alpha_beta(opp, sim_board, AI_Player.DEPTH, MININT, MAXINT)
 
             if move.score > max_score:
                 max_score = move.score

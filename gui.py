@@ -17,6 +17,8 @@ CHOICE_HEIGHT = 150
 
 class Choice:
     def __init__(self, choice1, choice2):
+        self.frame = 0
+        self.fade_in_sec = 3
         self.choice_1_rect = pygame.Rect(0, 0, CHOICE_WIDTH, CHOICE_HEIGHT)
         self.choice_1_rect.center = (WIN_SIZE[0]/4, WIN_SIZE[1]/2)
         self.choice_text_1 = choice1
@@ -26,15 +28,22 @@ class Choice:
         self.choice_text_2 = choice2
 
     def draw(self, surface):
-        pygame.draw.rect(surface, pygame.Color('#4996E3'), self.choice_1_rect)
-        pygame.draw.rect(surface, pygame.Color('#FFFFFF'), self.choice_1_rect, 4)
+        tmp = surface.copy()
+        pygame.draw.rect(tmp, pygame.Color('#4996E3'), self.choice_1_rect)
+        pygame.draw.rect(tmp, pygame.Color('#FFFFFF'), self.choice_1_rect, 4)
         text = pygame.font.Font('assets/GameCube.ttf', 12).render(self.choice_text_1, True, pygame.Color('#FFFFFF'))
-        surface.blit(text, text.get_rect(center=self.choice_1_rect.center))
+        tmp.blit(text, text.get_rect(center=self.choice_1_rect.center))
 
-        pygame.draw.rect(surface, pygame.Color('#4996E3'), self.choice_2_rect)
-        pygame.draw.rect(surface, pygame.Color('#FFFFFF'), self.choice_2_rect, 4)
+        pygame.draw.rect(tmp, pygame.Color('#4996E3'), self.choice_2_rect)
+        pygame.draw.rect(tmp, pygame.Color('#FFFFFF'), self.choice_2_rect, 4)
         text = pygame.font.Font('assets/GameCube.ttf', 12).render(self.choice_text_2, True, pygame.Color('#FFFFFF'))
-        surface.blit(text, text.get_rect(center=self.choice_2_rect.center))
+        tmp.blit(text, text.get_rect(center=self.choice_2_rect.center))
+        fade_in = (self.frame / (self.fade_in_sec * 60)) * 178.5
+        if self.frame < (self.fade_in_sec * 60):
+            self.frame+=1
+        tmp.set_alpha(int(fade_in))
+
+        surface.blit(tmp,(0,0))
 
     def is_clicked(self, vector):
         if self.choice_1_rect.collidepoint(vector):

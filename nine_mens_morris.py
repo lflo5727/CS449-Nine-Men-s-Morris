@@ -9,16 +9,16 @@ from gui import Gui, Choice, WIN_SIZE
 log = logging.getLogger("game_flow")
 logging.basicConfig(level="INFO")
 
-GAME_STATE = "STARTING"
 
-def main():
+def start_game():
     clock = pygame.time.Clock()
-    turns = 0
     board = Board()
-    player1 = Player("Player 1", 1, board)
+    turns = 0
+    MAX_TURNS = 500
 
     play_ai = None
     choice = Choice("Human", "Computer")
+    choice.fade_in_sec = 6.5
     screen = pygame.display.set_mode(WIN_SIZE)
     while play_ai is None:
         events = pygame.event.get()
@@ -26,16 +26,23 @@ def main():
         
         for e in events:
             if e.type == pygame.QUIT:
-                return
+                return 0
             if e.type == pygame.MOUSEBUTTONDOWN:
                 if play_ai is None:
                     picked = choice.is_clicked(mouse_pos)
                     if picked == 1:
                         play_ai = False
+                        player1 = Player("Player 1", 1, board)
                         player2 = Player("Player 2", 2, board)
                     elif picked == 2:
                         play_ai = True
+                        player1 = Player("Player 1", 1, board)
                         player2 = AI_Player("Computer", 2, board, player1)
+                    elif pygame.Rect(0,0,10,10).collidepoint(mouse_pos):
+                        play_ai = "yes"
+                        player1 = AI_Player("C3PO", 1, board, None)
+                        player2 = AI_Player("R2D2", 2, board, player1)
+                        player1.opponent = player2
         choice.draw(screen)
 
         pygame.display.flip()
@@ -52,15 +59,10 @@ def main():
 
     game_won_by = None
     while True:
-        if isinstance(current_player, AI_Player):
-            if turns < 3:
+        if isinstance(current_player, AI_Player) and not game_won_by:
+            if current_player.get_phase() == Phase.FLYING:
                 AI_Player.DEPTH = 2
-            elif turns < 9:
-                AI_Player.DEPTH = 3
-            elif current_player.get_phase() == Phase.FLYING:
-                AI_Player.DEPTH = 2
-            else:
-                AI_Player.DEPTH = 4
+
             move = current_player.get_best_move()
             log.info("Move score: %d", move.score)
             if move.phase == Phase.PLACING:
@@ -91,28 +93,29 @@ def main():
                 else:
                     log.critical("AI BROKE. COULD NOT REMOVE.")
                 next(player_toggle) # skip the next cycle to return to normal
-            current_player = next(player_toggle)
             turns += 1
+            current_player = next(player_toggle)
 
         events = pygame.event.get()
         mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) 
+        mouse_btns = pygame.mouse.get_pressed()
         
         for e in events:
             if e.type == pygame.QUIT:
-                return
-            if e.type == pygame.MOUSEBUTTONDOWN:
+                return 0
+            if e.type == pygame.MOUSEBUTTONDOWN and mouse_btns == (1,0,0):
                 selected_piece = gui.get_piece(mouse_pos)
                 if selected_piece:
                     log.info("%s piece picked up", selected_piece)
                     prev_selected_piece_pos = selected_piece.xy
-            if e.type == pygame.MOUSEBUTTONUP:
+            if e.type == pygame.MOUSEBUTTONUP and (mouse_btns == (0,0,0) or mouse_btns == (0,0,1)):
                 log.info("%s piece dropped", selected_piece)
                 prev_selected_piece = selected_piece
                 selected_piece = None
 
         if game_won_by:
             pass
-        if selected_piece and not can_remove_piece:
+        elif selected_piece and not can_remove_piece:
             selected_piece.move(*mouse_pos)
         elif prev_selected_piece:
             action_succesful = False
@@ -154,9 +157,14 @@ def main():
             prev_selected_piece = None
         
         
-        if not player1.can_move() or not player1.pieces and len(player1.get_placed_pieces()) < MIN_NUM_PIECES:
+        if turns >= MAX_TURNS or \
+           not player1.can_move() and not player2.can_move() and \
+           not player1.pieces and len(player1.get_placed_pieces()) < MIN_NUM_PIECES and \
+           not player2.pieces and len(player2.get_placed_pieces()) < MIN_NUM_PIECES:
+            game_won_by = "TIE! Everyone"
+        elif not player1.can_move() or not player1.pieces and len(player1.get_placed_pieces()) < MIN_NUM_PIECES:
             game_won_by = player2
-        elif not player2.can_move() or not player1.pieces and len(player2.get_placed_pieces()) < MIN_NUM_PIECES:
+        elif not player2.can_move() or not player2.pieces and len(player2.get_placed_pieces()) < MIN_NUM_PIECES:
             game_won_by = player1
 
         gui.draw_board()
@@ -167,10 +175,32 @@ def main():
         else:
             gui.game_message("%s remove piece from other player." % (current_player))
 
+        choice = Choice("Quit", "Play new game")
+        while game_won_by is not None:
+            events = pygame.event.get()
+            mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) 
+            
+            for e in events:
+                if e.type == pygame.QUIT:
+                    return 0
+                if e.type == pygame.MOUSEBUTTONDOWN:
+                    picked = choice.is_clicked(mouse_pos)
+                    if picked == 1:
+                        return 0
+                    elif picked == 2:
+                        return 1
+            gui.draw_board()
+            gui.game_message("%s WON!" % (game_won_by))
+            gui.draw_pieces()
+            choice.draw(screen)
+            pygame.display.flip()
+            clock.tick(60)
+
         gui.draw_pieces()
         gui.debug_message(str(mouse_pos), gui.tell(mouse_pos))
         pygame.display.flip()
         clock.tick(60)
 
 if __name__ == '__main__':
-    main()
+    while start_game():
+        pass
