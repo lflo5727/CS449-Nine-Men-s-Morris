@@ -60,6 +60,8 @@ def start_game():
     game_won_by = None
     while True:
         if isinstance(current_player, AI_Player) and not game_won_by:
+            if current_player.get_phase() == Phase.FLYING:
+                AI_Player.DEPTH = 3
             move = current_player.get_best_move()
             log.info("Move score: %d", move.score)
             if move.phase == Phase.PLACING:
