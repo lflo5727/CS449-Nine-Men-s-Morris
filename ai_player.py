@@ -200,7 +200,7 @@ class SimulateGame:
             elif player == opp_player:
                 score += -sub_score
 
-        return score
+        return score + random.randint(-2,2)
 
     def game_over(self, p_id):
         if self.get_phase(p_id) != Phase.PLACING:
