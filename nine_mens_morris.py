@@ -192,12 +192,13 @@ def start_game():
             gui.draw_board()
             gui.game_message("%s WON!" % (game_won_by))
             gui.draw_pieces()
+            gui.debug_message(str(turns), str(mouse_pos), gui.tell(mouse_pos))
             choice.draw(screen)
             pygame.display.flip()
             clock.tick(60)
 
         gui.draw_pieces()
-        gui.debug_message(str(mouse_pos), gui.tell(mouse_pos))
+        gui.debug_message(str(turns), str(mouse_pos), gui.tell(mouse_pos))
         pygame.display.flip()
         clock.tick(60)
 

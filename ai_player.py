@@ -1,7 +1,8 @@
 from typing import List, Dict
+from multiprocessing import Process, Queue
 from enum import Enum
 
-import logging, math, random, sys
+import logging, random, sys, multiprocessing
 
 from board import MAX_NUM_PIECES, MIN_NUM_PIECES, Board, Player, Phase
 
@@ -56,6 +57,22 @@ class SimulateGame:
                          'num_on_board': 0
             },
         }
+
+    def copy(self):
+        _copy = SimulateGame()
+        _copy.board = dict(self.board)
+        _copy.p1_id = int(self.p1_id)
+        _copy.p2_id = int(self.p2_id)
+        _copy.player_data = {
+            _copy.p1_id: {'num_placed': int(self.player_data[self.p1_id]['num_placed']),
+                         'num_on_board': int(self.player_data[self.p1_id]['num_on_board'])
+            },
+            _copy.p2_id: {'num_placed': int(self.player_data[self.p2_id]['num_placed']),
+                         'num_on_board': int(self.player_data[self.p2_id]['num_on_board'])
+            },
+        }
+        return _copy
+
 
     def get_phase(self, p_id):
         if self.player_data[p_id]['num_placed'] < MAX_NUM_PIECES:
@@ -200,7 +217,7 @@ class SimulateGame:
             elif player == opp_player:
                 score += -sub_score
 
-        return score
+        return score + random.randint(-2, 2)
 
     def game_over(self, p_id):
         if self.get_phase(p_id) != Phase.PLACING:
@@ -210,7 +227,7 @@ class SimulateGame:
 
 class AI_Player(Player):
     MAX_SCORE = 999999
-    DEPTH = 3
+    DEPTH = 4
     PRUNING = True
 
     def __init__(self, name, id, board: "Board", opponent: "Player"):
@@ -223,24 +240,49 @@ class AI_Player(Player):
             'pruned': 0
         }
     
+    def process_moves(self, move, opp, sim_board, depth, alpha, beta, q):
+        sim_board.do(move)
+        move.score += self.alpha_beta(opp, sim_board, AI_Player.DEPTH, MININT, MAXINT)
+        sim_board.undo(move)
+        q.put(move)
+
     def get_best_move(self):
         
         phase = self.get_phase()
 
         sim_board = SimulateGame(p1_id = self.opponent.id, p2_id = self.id)
         sim_board.set_state(self.board, player1 = self.opponent, player2 = self)
-        opp = sim_board.get_opponent(self.id)
 
         moves = self.generate_moves(self.id, sim_board)
         
-        max_score = -AI_Player.MAX_SCORE
-        scored_moves = {}
-        scored_moves[max_score] = []
+        def chunks(lst, n):
+            p = len(lst) // n
+            if len(lst)-p > 0:
+                return [lst[:p]] + chunks(lst[p:], n-1)
+            else:
+                return [lst]
 
+        q = Queue()
+        pool = []
         for move in moves:
-            sim_board.do(move)
-            move.score += self.alpha_beta(opp, sim_board, AI_Player.DEPTH, MININT, MAXINT)
+            pool.append(
+                Process(
+                    target=self.process_moves, 
+                    args=(
+                        move, self.opponent.id, sim_board.copy(), 
+                        AI_Player.DEPTH, MININT, MAXINT, q
+                    )
+                )
+            )
+        log.info("Pool size: %d", len(pool))
+        for process in pool:
+            process.start()
 
+        max_score = -AI_Player.MAX_SCORE
+
+        scored_moves = {}
+        for _ in pool:
+            move = q.get(True)
             if move.score > max_score:
                 max_score = move.score
                 
@@ -249,7 +291,7 @@ class AI_Player(Player):
             
             scored_moves[move.score].append(move)
 
-            sim_board.undo(move)
+        
         if scored_moves[max_score]:
             return random.choice(scored_moves[max_score])
         else:
