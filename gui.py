@@ -12,6 +12,44 @@ X_OFFSET = (WIN_SIZE[0] - TILESIZE * GRID_SIZE) // 2
 Y_OFFSET = 120
 Y_OFFSET_PLAYER = 70
 RADIUS = 20
+CHOICE_WIDTH = 225
+CHOICE_HEIGHT = 150
+
+class Choice:
+    def __init__(self, choice1, choice2):
+        self.frame = 0
+        self.fade_in_sec = 3
+        self.choice_1_rect = pygame.Rect(0, 0, CHOICE_WIDTH, CHOICE_HEIGHT)
+        self.choice_1_rect.center = (WIN_SIZE[0]/4, WIN_SIZE[1]/2)
+        self.choice_text_1 = choice1
+
+        self.choice_2_rect = pygame.Rect(0, 0, CHOICE_WIDTH, CHOICE_HEIGHT)
+        self.choice_2_rect.center = (WIN_SIZE[0] - WIN_SIZE[0]/4, WIN_SIZE[1]/2)
+        self.choice_text_2 = choice2
+
+    def draw(self, surface):
+        tmp = surface.copy()
+        pygame.draw.rect(tmp, pygame.Color('#4996E3'), self.choice_1_rect)
+        pygame.draw.rect(tmp, pygame.Color('#FFFFFF'), self.choice_1_rect, 4)
+        text = pygame.font.Font('assets/GameCube.ttf', 12).render(self.choice_text_1, True, pygame.Color('#FFFFFF'))
+        tmp.blit(text, text.get_rect(center=self.choice_1_rect.center))
+
+        pygame.draw.rect(tmp, pygame.Color('#4996E3'), self.choice_2_rect)
+        pygame.draw.rect(tmp, pygame.Color('#FFFFFF'), self.choice_2_rect, 4)
+        text = pygame.font.Font('assets/GameCube.ttf', 12).render(self.choice_text_2, True, pygame.Color('#FFFFFF'))
+        tmp.blit(text, text.get_rect(center=self.choice_2_rect.center))
+        fade_in = (self.frame / (self.fade_in_sec * 60)) * 178.5
+        if self.frame < (self.fade_in_sec * 60):
+            self.frame+=1
+        tmp.set_alpha(int(fade_in))
+
+        surface.blit(tmp,(0,0))
+
+    def is_clicked(self, vector):
+        if self.choice_1_rect.collidepoint(vector):
+            return 1
+        elif self.choice_2_rect.collidepoint(vector):
+            return 2
 
 class Gui:
     class Line:
@@ -173,6 +211,18 @@ class Gui:
         self.board = Gui.Board(board.board)
         self.players = {1: Gui.Player(1, player1), 2: Gui.Player(2, player2)}
         self.screen = pygame.display.set_mode(WIN_SIZE)
+        self.choice = None
+
+    def find_piece(self, find_me):
+        for player in self.players.values():
+            for piece in player.pieces.values():
+                if piece.piece is find_me:
+                    return piece
+
+    def find_node(self, find_me):
+        for node in self.board.nodes.values():
+            if node.node is find_me:
+                return node
 
     def get_piece(self, vector):
         for player in self.players.values():
@@ -188,6 +238,9 @@ class Gui:
     def tell(self, vector):
         result = [self.get_node(vector), self.get_piece(vector)]
         return ', '.join([str(x) for x in result if x])
+
+    def draw_choice(self):
+        self.choice.draw(self.screen)
 
     def draw_board(self):
         self.board.draw(self.screen)
